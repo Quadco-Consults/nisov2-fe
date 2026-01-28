@@ -45,15 +45,20 @@ export interface BankDetails {
 export interface Collection {
   id: string;
   referenceNumber: string;
-  participantId: string;
-  participantName: string;
-  participantType: string;
-  chargeCode: "MET.TSP" | "MET.ISO" | "DLR" | "TLF";
+  // Entity info
+  entityId: string;
+  entityAlias: string;
+  entityName: string;
+  entityType: "DISCO" | "GENCO" | "BILATERAL";
+  // Payment identification
+  paymentId: string; // Format: ChargeCode-ServiceProviderAlias (e.g., "MET.TSP-TCN-TSP")
+  chargeCode: string;
+  serviceProviderId: string;
+  serviceProviderAlias: string;
+  // Settlement period
   period: string;
-  currentPrincipal: number;
-  legacyDebt: number;
-  unappliedCredits: number;
-  totalAmount: number; // Recursive: (currentPrincipal + legacyDebt) - unappliedCredits
+  // Amounts
+  amount: number;
   status: "pending" | "verified" | "posted" | "reconciled" | "disputed";
   auditLocked: boolean;
   verifiedBy?: string;
@@ -199,6 +204,45 @@ export interface Adjustment {
   period: string;
   status: "pending" | "applied";
   createdAt: string;
+}
+
+// Deduction Type (for configuring deduction types)
+export interface DeductionType {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  calculationType: "fixed" | "percentage";
+  defaultValue?: number; // Default amount or percentage
+  linkedServiceProviders: string[]; // Service provider IDs this deduction applies to
+  status: "active" | "inactive";
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Penalty Record (for market rule violations)
+export interface PenaltyRecord {
+  id: string;
+  referenceNumber: string;
+  entityId: string;
+  entityName: string;
+  entityType: "DISCO" | "GENCO" | "BILATERAL";
+  penaltyType: "UGD" | "LPP" | "MRV" | "OTHER";
+  penaltyTypeName: string;
+  reason: string;
+  violationDate: string;
+  calculationType: "fixed" | "percentage";
+  baseAmount?: number;
+  rate?: number; // percentage rate if applicable
+  amount: number;
+  status: "pending" | "approved" | "applied" | "waived" | "disputed";
+  approvedBy?: string;
+  approvedAt?: string;
+  appliedAt?: string;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Dashboard Types
@@ -537,4 +581,119 @@ export interface SecuritySession {
   userAgent?: string;
   isActive: boolean;
   expiresAt: string;
+}
+
+// ===========================================
+// User Management: Permissions & Roles
+// ===========================================
+
+// Permission Categories
+export type PermissionCategory =
+  | "user_management"
+  | "entity_management"
+  | "collections"
+  | "disbursements"
+  | "audit"
+  | "reports"
+  | "system";
+
+// System Permission
+export interface Permission {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  category: PermissionCategory;
+}
+
+// Custom Role (for user-created roles)
+export interface CustomRole {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  permissions: string[];
+  isSystemRole: boolean;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Managed User (for user management module)
+export interface ManagedUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  department: string;
+  roleId: string;
+  roleName: string;
+  status: "active" | "inactive" | "suspended";
+  lastLogin?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ===========================================
+// Charge Management Types
+// ===========================================
+
+// Entity types that charges can be assigned to
+export type ChargeEntityType = "DISCO" | "GENCO" | "SERVICE_PROVIDER" | "SERC" | "BILATERAL" | "ALL";
+
+// Sub-charge (for charges with multiple components)
+export interface SubCharge {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  // "ALL" for all entity types, or a specific entity type
+  entityType: ChargeEntityType;
+}
+
+// Main Charge Type
+export interface ChargeType {
+  id: string;
+  name: string;
+  description?: string;
+  hasSubCharges: boolean;
+  // Only populated if hasSubCharges is false
+  code?: string;
+  // "ALL" for all entity types, or a specific entity type
+  entityType?: ChargeEntityType;
+  // Service providers that receive payments for this charge type
+  linkedServiceProviders?: string[];
+  // Only populated if hasSubCharges is true
+  subCharges?: SubCharge[];
+  status: "active" | "inactive";
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Settlement Registration Types
+export interface SettlementPaymentLine {
+  chargeCode: string;
+  chargeName: string;
+  serviceProviderId: string;
+  serviceProviderAlias: string;
+  serviceProviderName: string;
+  paymentIdentifier: string; // e.g., "MET.TSP-TCN"
+  amount: number;
+}
+
+export interface SettlementRegistration {
+  id: string;
+  referenceNumber: string;
+  entityId: string;
+  entityName: string;
+  entityAlias: string;
+  entityType: "DISCO" | "GENCO" | "BILATERAL";
+  settlementPeriod: string; // e.g., "2025-01" for January 2025
+  paymentLines: SettlementPaymentLine[];
+  totalAmount: number;
+  status: "draft" | "pending" | "verified" | "posted";
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
 }

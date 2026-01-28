@@ -301,12 +301,6 @@ export const NAVIGATION = [
     roles: ["all"],
   },
   {
-    title: "Entity Registry",
-    href: "/entities",
-    icon: "Building2",
-    roles: ["finance_manager", "admin", "super_admin", "treasury_officer", "settlement_officer"],
-  },
-  {
     title: "Collections",
     href: "/collections",
     icon: "DollarSign",
@@ -325,7 +319,7 @@ export const NAVIGATION = [
     roles: ["debt_collector", "finance_manager", "admin", "super_admin"],
   },
   {
-    title: "Deductions",
+    title: "Deductions/Penalty",
     href: "/deductions",
     icon: "Calculator",
     roles: ["finance_manager", "admin", "super_admin"],
@@ -341,6 +335,12 @@ export const NAVIGATION = [
     href: "/audit-logs",
     icon: "FileText",
     roles: ["admin", "super_admin", "auditor", "compliance_auditor"],
+  },
+  {
+    title: "Entity Registry",
+    href: "/entities",
+    icon: "Building2",
+    roles: ["finance_manager", "admin", "super_admin", "treasury_officer", "settlement_officer"],
   },
   {
     title: "User Management",
@@ -380,4 +380,357 @@ export const DEBT_STATUSES = [
   "critical",
   "legal",
   "resolved",
+] as const;
+
+// ===========================================
+// User Management: Permissions System
+// ===========================================
+
+// Permission Categories Configuration
+export const PERMISSION_CATEGORIES = {
+  user_management: {
+    code: "user_management",
+    name: "User Management",
+    description: "Create, edit, and manage system users and roles",
+    icon: "Users",
+  },
+  entity_management: {
+    code: "entity_management",
+    name: "Entity Management",
+    description: "Manage market participants and entity registry",
+    icon: "Building2",
+  },
+  collections: {
+    code: "collections",
+    name: "Collections",
+    description: "View and manage collection records",
+    icon: "DollarSign",
+  },
+  disbursements: {
+    code: "disbursements",
+    name: "Disbursements",
+    description: "View, create, and approve disbursements",
+    icon: "Send",
+  },
+  audit: {
+    code: "audit",
+    name: "Audit & Compliance",
+    description: "Access audit logs and compliance reports",
+    icon: "FileText",
+  },
+  reports: {
+    code: "reports",
+    name: "Reports",
+    description: "Generate and export system reports",
+    icon: "BarChart",
+  },
+  system: {
+    code: "system",
+    name: "System Administration",
+    description: "Configure system settings and security",
+    icon: "Settings",
+  },
+} as const;
+
+// System Permissions (granular)
+export const SYSTEM_PERMISSIONS = {
+  // User Management
+  "user:view": {
+    code: "user:view",
+    name: "View Users",
+    description: "View user list and details",
+    category: "user_management",
+  },
+  "user:create": {
+    code: "user:create",
+    name: "Create Users",
+    description: "Create new system users",
+    category: "user_management",
+  },
+  "user:edit": {
+    code: "user:edit",
+    name: "Edit Users",
+    description: "Edit user information and roles",
+    category: "user_management",
+  },
+  "user:delete": {
+    code: "user:delete",
+    name: "Delete Users",
+    description: "Deactivate or delete users",
+    category: "user_management",
+  },
+  "role:view": {
+    code: "role:view",
+    name: "View Roles",
+    description: "View roles and permissions",
+    category: "user_management",
+  },
+  "role:create": {
+    code: "role:create",
+    name: "Create Roles",
+    description: "Create custom roles with permissions",
+    category: "user_management",
+  },
+  "role:edit": {
+    code: "role:edit",
+    name: "Edit Roles",
+    description: "Modify custom role permissions",
+    category: "user_management",
+  },
+  "role:delete": {
+    code: "role:delete",
+    name: "Delete Roles",
+    description: "Delete custom roles",
+    category: "user_management",
+  },
+
+  // Entity Management
+  "entity:view": {
+    code: "entity:view",
+    name: "View Entities",
+    description: "View entity registry and details",
+    category: "entity_management",
+  },
+  "entity:create": {
+    code: "entity:create",
+    name: "Create Entities",
+    description: "Register new market entities",
+    category: "entity_management",
+  },
+  "entity:edit": {
+    code: "entity:edit",
+    name: "Edit Entities",
+    description: "Modify entity information",
+    category: "entity_management",
+  },
+  "entity:approve": {
+    code: "entity:approve",
+    name: "Approve Entities",
+    description: "Validate and approve entity registrations",
+    category: "entity_management",
+  },
+  "entity:deactivate": {
+    code: "entity:deactivate",
+    name: "Deactivate Entities",
+    description: "Suspend or deactivate entities",
+    category: "entity_management",
+  },
+
+  // Collections
+  "collection:view": {
+    code: "collection:view",
+    name: "View Collections",
+    description: "View collection records and summaries",
+    category: "collections",
+  },
+  "collection:create": {
+    code: "collection:create",
+    name: "Create Collections",
+    description: "Create new collection entries",
+    category: "collections",
+  },
+  "collection:edit": {
+    code: "collection:edit",
+    name: "Edit Collections",
+    description: "Modify collection records",
+    category: "collections",
+  },
+  "collection:verify": {
+    code: "collection:verify",
+    name: "Verify Collections",
+    description: "Verify and validate collection data",
+    category: "collections",
+  },
+  "collection:post": {
+    code: "collection:post",
+    name: "Post Collections",
+    description: "Post verified collections to ledger",
+    category: "collections",
+  },
+
+  // Disbursements
+  "disbursement:view": {
+    code: "disbursement:view",
+    name: "View Disbursements",
+    description: "View disbursement records and waterfall",
+    category: "disbursements",
+  },
+  "disbursement:create": {
+    code: "disbursement:create",
+    name: "Create Disbursements",
+    description: "Create disbursement batches",
+    category: "disbursements",
+  },
+  "disbursement:edit": {
+    code: "disbursement:edit",
+    name: "Edit Disbursements",
+    description: "Modify disbursement records",
+    category: "disbursements",
+  },
+  "disbursement:approve": {
+    code: "disbursement:approve",
+    name: "Approve Disbursements",
+    description: "Approve disbursement for processing",
+    category: "disbursements",
+  },
+  "disbursement:execute": {
+    code: "disbursement:execute",
+    name: "Execute Disbursements",
+    description: "Execute approved disbursements",
+    category: "disbursements",
+  },
+
+  // Audit
+  "audit:view": {
+    code: "audit:view",
+    name: "View Audit Logs",
+    description: "Access system audit trail",
+    category: "audit",
+  },
+  "audit:export": {
+    code: "audit:export",
+    name: "Export Audit Logs",
+    description: "Export audit data for compliance",
+    category: "audit",
+  },
+  "security:view": {
+    code: "security:view",
+    name: "View Security Logs",
+    description: "View security and access logs",
+    category: "audit",
+  },
+
+  // Reports
+  "report:view": {
+    code: "report:view",
+    name: "View Reports",
+    description: "Access system reports",
+    category: "reports",
+  },
+  "report:generate": {
+    code: "report:generate",
+    name: "Generate Reports",
+    description: "Generate custom reports",
+    category: "reports",
+  },
+  "report:export": {
+    code: "report:export",
+    name: "Export Reports",
+    description: "Export reports to external formats",
+    category: "reports",
+  },
+
+  // System
+  "system:configure": {
+    code: "system:configure",
+    name: "System Configuration",
+    description: "Modify system settings",
+    category: "system",
+  },
+  "system:backup": {
+    code: "system:backup",
+    name: "System Backup",
+    description: "Manage system backups",
+    category: "system",
+  },
+  "waterfall:configure": {
+    code: "waterfall:configure",
+    name: "Configure Waterfall",
+    description: "Modify disbursement waterfall tiers",
+    category: "system",
+  },
+  "penalty:override": {
+    code: "penalty:override",
+    name: "Override Penalties",
+    description: "Waive or override penalties",
+    category: "system",
+  },
+} as const;
+
+// User Status Options
+export const USER_STATUS_OPTIONS = [
+  { value: "active", label: "Active", color: "green" },
+  { value: "inactive", label: "Inactive", color: "gray" },
+  { value: "suspended", label: "Suspended", color: "red" },
+] as const;
+
+// Department Options
+export const DEPARTMENT_OPTIONS = [
+  "Treasury",
+  "Settlements",
+  "Finance",
+  "Collections",
+  "Internal Audit",
+  "Legal",
+  "IT",
+  "Operations",
+  "Compliance",
+  "Administration",
+] as const;
+
+// ===========================================
+// Charge Management
+// ===========================================
+
+// Entity types for charge assignment
+export const CHARGE_ENTITY_TYPES = {
+  DISCO: {
+    value: "DISCO",
+    label: "Distribution Companies (DISCOs)",
+    description: "Applies only to Distribution Companies",
+  },
+  GENCO: {
+    value: "GENCO",
+    label: "Generation Companies (GENCOs)",
+    description: "Applies only to Generation Companies",
+  },
+  ALL: {
+    value: "ALL",
+    label: "All Entities",
+    description: "Applies to all market participants",
+  },
+} as const;
+
+// ===========================================
+// Nigerian States
+// ===========================================
+
+export const NIGERIAN_STATES = [
+  { code: "AB", name: "Abia" },
+  { code: "AD", name: "Adamawa" },
+  { code: "AK", name: "Akwa Ibom" },
+  { code: "AN", name: "Anambra" },
+  { code: "BA", name: "Bauchi" },
+  { code: "BY", name: "Bayelsa" },
+  { code: "BE", name: "Benue" },
+  { code: "BO", name: "Borno" },
+  { code: "CR", name: "Cross River" },
+  { code: "DE", name: "Delta" },
+  { code: "EB", name: "Ebonyi" },
+  { code: "ED", name: "Edo" },
+  { code: "EK", name: "Ekiti" },
+  { code: "EN", name: "Enugu" },
+  { code: "FC", name: "FCT - Abuja" },
+  { code: "GO", name: "Gombe" },
+  { code: "IM", name: "Imo" },
+  { code: "JI", name: "Jigawa" },
+  { code: "KD", name: "Kaduna" },
+  { code: "KN", name: "Kano" },
+  { code: "KT", name: "Katsina" },
+  { code: "KE", name: "Kebbi" },
+  { code: "KO", name: "Kogi" },
+  { code: "KW", name: "Kwara" },
+  { code: "LA", name: "Lagos" },
+  { code: "NA", name: "Nasarawa" },
+  { code: "NI", name: "Niger" },
+  { code: "OG", name: "Ogun" },
+  { code: "ON", name: "Ondo" },
+  { code: "OS", name: "Osun" },
+  { code: "OY", name: "Oyo" },
+  { code: "PL", name: "Plateau" },
+  { code: "RI", name: "Rivers" },
+  { code: "SO", name: "Sokoto" },
+  { code: "TA", name: "Taraba" },
+  { code: "YO", name: "Yobe" },
+  { code: "ZA", name: "Zamfara" },
 ] as const;

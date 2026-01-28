@@ -14,6 +14,8 @@ import {
   Shield,
   Star,
   Filter,
+  Percent,
+  Trash2,
 } from "lucide-react";
 import { MainLayout } from "@/components/layouts";
 import { Button } from "@/components/ui/button";
@@ -52,10 +54,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils/formatters";
 import {
   ENTITY_CATEGORIES,
   ENTITY_REGISTRATION_STATUSES,
+  NIGERIAN_STATES,
 } from "@/lib/constants";
 import { mockRegisteredEntities } from "@/server/services/mock-data";
 
@@ -67,9 +71,81 @@ const categoryIcons = {
   BILATERAL: LinkIcon,
 };
 
+// Types for SERC service provider allocations
+interface ServiceProviderAllocation {
+  serviceProviderId: string;
+  percentage: number;
+}
+
 export default function EntitiesPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [newEntityCategory, setNewEntityCategory] = useState("");
+
+  // SERC-specific state
+  const [selectedDiscos, setSelectedDiscos] = useState<string[]>([]);
+  const [spAllocations, setSpAllocations] = useState<ServiceProviderAllocation[]>([]);
+  const [selectedState, setSelectedState] = useState<string>("");
+
+  // Get DISCOs and Service Providers from mock data
+  const availableDiscos = mockRegisteredEntities.filter(
+    (e) => e.category === "DISCO" && e.registrationStatus === "active"
+  );
+  const availableServiceProviders = mockRegisteredEntities.filter(
+    (e) => e.category === "SERVICE_PROVIDER" && e.registrationStatus === "active"
+  );
+
+  // Handle adding a DISCO for SERC
+  const handleAddDisco = () => {
+    const availableDisco = availableDiscos.find(
+      (disco) => !selectedDiscos.includes(disco.id)
+    );
+    if (availableDisco) {
+      setSelectedDiscos((prev) => [...prev, availableDisco.id]);
+    }
+  };
+
+  // Handle removing a DISCO
+  const handleRemoveDisco = (discoId: string) => {
+    setSelectedDiscos((prev) => prev.filter((id) => id !== discoId));
+  };
+
+  // Handle changing a DISCO selection
+  const handleDiscoChange = (oldDiscoId: string, newDiscoId: string) => {
+    setSelectedDiscos((prev) =>
+      prev.map((id) => (id === oldDiscoId ? newDiscoId : id))
+    );
+  };
+
+  // Handle adding a service provider allocation
+  const handleAddSpAllocation = () => {
+    const availableSp = availableServiceProviders.find(
+      (sp) => !spAllocations.some((alloc) => alloc.serviceProviderId === sp.id)
+    );
+    if (availableSp) {
+      setSpAllocations((prev) => [
+        ...prev,
+        { serviceProviderId: availableSp.id, percentage: 0 },
+      ]);
+    }
+  };
+
+  // Handle removing a service provider allocation
+  const handleRemoveSpAllocation = (serviceProviderId: string) => {
+    setSpAllocations((prev) =>
+      prev.filter((alloc) => alloc.serviceProviderId !== serviceProviderId)
+    );
+  };
+
+  // Reset SERC fields when category changes
+  const handleCategoryChange = (category: string) => {
+    setNewEntityCategory(category);
+    if (category !== "SERC") {
+      setSelectedDiscos([]);
+      setSpAllocations([]);
+      setSelectedState("");
+    }
+  };
 
   const filteredEntities = mockRegisteredEntities.filter((entity) => {
     const matchesCategory =
@@ -137,7 +213,7 @@ export default function EntitiesPage() {
                   </div>
                   <div className="grid gap-2">
                     <Label>Category *</Label>
-                    <Select>
+                    <Select value={newEntityCategory} onValueChange={handleCategoryChange}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
@@ -210,49 +286,275 @@ export default function EntitiesPage() {
                   </div>
                 </div>
 
-                {/* SERC Linkage */}
-                <div className="border-t pt-4">
-                  <h4 className="font-medium mb-3">Regulatory Linkage</h4>
-                  <div className="grid gap-2">
-                    <Label>Linked Service Provider (for SERCs)</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select if applicable" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {mockRegisteredEntities
-                          .filter((e) => e.category === "SERVICE_PROVIDER")
-                          .map((sp) => (
-                            <SelectItem key={sp.id} value={sp.id}>
-                              {sp.name}
-                            </SelectItem>
+                {/* Service Provider Settings - Only show for Service Providers */}
+                {newEntityCategory === "SERVICE_PROVIDER" && (
+                  <>
+                    <div className="border-t pt-4">
+                      <h4 className="font-medium mb-3">Entity Type Linkage</h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Select the entity types this service provider will be linked to for disbursements
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {Object.values(ENTITY_CATEGORIES)
+                          .filter((cat) => cat.code !== "SERVICE_PROVIDER")
+                          .map((cat) => (
+                            <div key={cat.code} className="flex items-center space-x-2">
+                              <Checkbox id={`linkage-${cat.code}`} />
+                              <Label
+                                htmlFor={`linkage-${cat.code}`}
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                {cat.name}
+                              </Label>
+                            </div>
                           ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      5% statutory split will be auto-triggered on linked SP
-                      disbursements
-                    </p>
-                  </div>
-                  <div className="grid gap-2 mt-4">
-                    <Label>State (for SERCs)</Label>
-                    <Input placeholder="e.g., Lagos, FCT" />
-                  </div>
-                </div>
+                      </div>
+                    </div>
 
-                {/* Priority Flag */}
-                <div className="border-t pt-4">
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" id="isPriority" />
-                    <Label htmlFor="isPriority" className="font-normal">
-                      Mark as Priority Service Provider
-                    </Label>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Priority SPs are moved to Tier 1 of the Disbursement
-                    Waterfall
-                  </p>
-                </div>
+                    {/* Priority Flag - Only for Service Providers */}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="isPriority" />
+                        <Label htmlFor="isPriority" className="font-normal cursor-pointer">
+                          Mark as Priority Service Provider
+                        </Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Priority SPs are moved to Tier 1 of the Disbursement
+                        Waterfall
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* SERC Settings - Only show for State Regulatory Commission */}
+                {newEntityCategory === "SERC" && (
+                  <>
+                    {/* State Selection */}
+                    <div className="border-t pt-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="sercState">State *</Label>
+                        <Select value={selectedState} onValueChange={setSelectedState}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select state" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {NIGERIAN_STATES.map((state) => (
+                              <SelectItem key={state.code} value={state.code}>
+                                {state.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          The Nigerian state this regulatory commission operates in
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Linked DISCOs */}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-medium">Linked DISCOs</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Select the Distribution Companies (DISCOs) operating in this SERC&apos;s jurisdiction
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleAddDisco}
+                          disabled={selectedDiscos.length >= availableDiscos.length}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add
+                        </Button>
+                      </div>
+
+                      {selectedDiscos.length === 0 ? (
+                        <p className="text-sm text-muted-foreground italic text-center py-4 border rounded-lg bg-muted/30">
+                          No DISCOs linked. Click &quot;Add&quot; to select DISCOs.
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {selectedDiscos.map((discoId, index) => {
+                            const disco = availableDiscos.find((d) => d.id === discoId);
+                            return (
+                              <div
+                                key={discoId}
+                                className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30"
+                              >
+                                <div className="flex-1">
+                                  <Select
+                                    value={discoId}
+                                    onValueChange={(value) => handleDiscoChange(discoId, value)}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select DISCO" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {availableDiscos
+                                        .filter(
+                                          (d) =>
+                                            d.id === discoId ||
+                                            !selectedDiscos.includes(d.id)
+                                        )
+                                        .map((d) => (
+                                          <SelectItem key={d.id} value={d.id}>
+                                            {d.alias} - {d.name}
+                                          </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRemoveDisco(discoId)}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Service Provider Allocations */}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-medium">Service Provider Allocations</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Configure what percentage of payments from each service provider goes to this SERC
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleAddSpAllocation}
+                          disabled={spAllocations.length >= availableServiceProviders.length}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add
+                        </Button>
+                      </div>
+
+                      {spAllocations.length === 0 ? (
+                        <p className="text-sm text-muted-foreground italic text-center py-4 border rounded-lg bg-muted/30">
+                          No service provider allocations added. Click &quot;Add&quot; to configure.
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {spAllocations.map((allocation, index) => {
+                            const selectedSp = availableServiceProviders.find(
+                              (sp) => sp.id === allocation.serviceProviderId
+                            );
+                            return (
+                              <div
+                                key={allocation.serviceProviderId}
+                                className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30"
+                              >
+                                <div className="flex-1">
+                                  <Label className="text-xs text-muted-foreground">
+                                    Service Provider
+                                  </Label>
+                                  <Select
+                                    value={allocation.serviceProviderId}
+                                    onValueChange={(value) => {
+                                      // Update the allocation with new SP ID
+                                      setSpAllocations((prev) =>
+                                        prev.map((alloc, i) =>
+                                          i === index
+                                            ? { ...alloc, serviceProviderId: value }
+                                            : alloc
+                                        )
+                                      );
+                                    }}
+                                  >
+                                    <SelectTrigger className="mt-1">
+                                      <SelectValue placeholder="Select service provider" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {availableServiceProviders
+                                        .filter(
+                                          (sp) =>
+                                            sp.id === allocation.serviceProviderId ||
+                                            !spAllocations.some(
+                                              (alloc) => alloc.serviceProviderId === sp.id
+                                            )
+                                        )
+                                        .map((sp) => (
+                                          <SelectItem key={sp.id} value={sp.id}>
+                                            {sp.alias} - {sp.name}
+                                          </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="w-[120px]">
+                                  <Label className="text-xs text-muted-foreground">
+                                    Percentage
+                                  </Label>
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      step="0.01"
+                                      value={allocation.percentage}
+                                      onChange={(e) =>
+                                        setSpAllocations((prev) =>
+                                          prev.map((alloc, i) =>
+                                            i === index
+                                              ? {
+                                                  ...alloc,
+                                                  percentage: parseFloat(e.target.value) || 0,
+                                                }
+                                              : alloc
+                                          )
+                                        )
+                                      }
+                                      className="text-right"
+                                    />
+                                    <Percent className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleRemoveSpAllocation(allocation.serviceProviderId)
+                                  }
+                                  className="text-destructive hover:text-destructive mt-5"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {spAllocations.length > 0 && (
+                        <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                          <p className="text-xs text-blue-700 dark:text-blue-300">
+                            <strong>Note:</strong> Multiple SERCs can receive percentages from the same
+                            service provider. Ensure total allocations from each service provider
+                            don&apos;t exceed 100%.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline">Cancel</Button>
