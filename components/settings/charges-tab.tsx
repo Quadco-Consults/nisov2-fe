@@ -60,9 +60,12 @@ import { ChargeType } from "@/types";
 import { ENTITY_CATEGORIES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
+import type { ChargeCategory } from "@/types";
+
 interface ChargesTabProps {
   charges: ChargeType[];
   onChargesChange: (charges: ChargeType[]) => void;
+  chargeCategory?: ChargeCategory; // Filter by charge category (DISCO or BILATERAL)
 }
 
 // Helper to get entity type display name
@@ -82,7 +85,7 @@ const entityTypeFilterOptions = [
   })),
 ];
 
-export function ChargesTab({ charges, onChargesChange }: ChargesTabProps) {
+export function ChargesTab({ charges, onChargesChange, chargeCategory }: ChargesTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">(
     "all"
@@ -96,6 +99,11 @@ export function ChargesTab({ charges, onChargesChange }: ChargesTabProps) {
 
   // Filter charges
   const filteredCharges = charges.filter((charge) => {
+    // First, filter by charge category if specified
+    if (chargeCategory && charge.chargeCategory !== chargeCategory) {
+      return false;
+    }
+
     const matchesSearch =
       charge.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       charge.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -262,6 +270,7 @@ export function ChargesTab({ charges, onChargesChange }: ChargesTabProps) {
                 <TableHead>Name</TableHead>
                 <TableHead>Code / Sub-charges</TableHead>
                 <TableHead>Entity Type</TableHead>
+                {chargeCategory === "DISCO" && <TableHead>Beneficiary</TableHead>}
                 <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[80px]">Actions</TableHead>
@@ -270,7 +279,7 @@ export function ChargesTab({ charges, onChargesChange }: ChargesTabProps) {
             <TableBody>
               {filteredCharges.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={chargeCategory === "DISCO" ? 8 : 7} className="text-center py-8">
                     <div className="text-muted-foreground">
                       <Tag className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p>No charge types found</p>
@@ -334,6 +343,24 @@ export function ChargesTab({ charges, onChargesChange }: ChargesTabProps) {
                           </Badge>
                         )}
                       </TableCell>
+                      {chargeCategory === "DISCO" && (
+                        <TableCell>
+                          {charge.hasSubCharges ? (
+                            <span className="text-sm text-muted-foreground">-</span>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className={
+                                charge.beneficiaryType === "GENCO"
+                                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                                  : "bg-blue-50 text-blue-700 border-blue-200"
+                              }
+                            >
+                              {charge.beneficiaryType === "GENCO" ? "GENCO" : "Service Provider"}
+                            </Badge>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Badge variant="secondary">
                           {charge.hasSubCharges ? "Composite" : "Simple"}
@@ -433,6 +460,7 @@ export function ChargesTab({ charges, onChargesChange }: ChargesTabProps) {
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         onCreateCharge={handleCreateCharge}
+        chargeCategory={chargeCategory}
       />
 
       {/* Edit Charge Dialog */}

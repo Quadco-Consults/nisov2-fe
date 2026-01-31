@@ -1125,6 +1125,8 @@ export const mockRegisteredEntities: RegisteredEntity[] = [
     remitaValidated: true,
     remitaValidationDate: "2024-01-15",
     isPrioritySP: false,
+    // Linked GENCOs for energy payments
+    linkedGencoIds: ["ent4", "ent5"],
     registrationStatus: "active",
     registeredBy: "Admin User",
     registeredAt: "2024-01-10",
@@ -1156,6 +1158,8 @@ export const mockRegisteredEntities: RegisteredEntity[] = [
     remitaValidated: true,
     remitaValidationDate: "2024-01-16",
     isPrioritySP: false,
+    // Linked GENCOs for energy payments
+    linkedGencoIds: ["ent4"],
     registrationStatus: "active",
     registeredBy: "Admin User",
     registeredAt: "2024-01-11",
@@ -1187,6 +1191,8 @@ export const mockRegisteredEntities: RegisteredEntity[] = [
     remitaValidated: true,
     remitaValidationDate: "2024-01-17",
     isPrioritySP: false,
+    // Linked GENCOs for energy payments
+    linkedGencoIds: ["ent5"],
     registrationStatus: "active",
     registeredBy: "Admin User",
     registeredAt: "2024-01-12",
@@ -1416,6 +1422,8 @@ export const mockRegisteredEntities: RegisteredEntity[] = [
     remitaValidated: true,
     remitaValidationDate: "2024-03-01",
     isPrioritySP: false,
+    // Linked GENCO - the collector/intermediary for bilateral payments
+    linkedGencoIds: ["ent4"],
     registrationStatus: "active",
     registeredBy: "Admin User",
     registeredAt: "2024-02-15",
@@ -2006,7 +2014,7 @@ export const mockManagedUsers: ManagedUser[] = [
 // ===========================================
 
 export const mockChargeTypes: ChargeType[] = [
-  // Simple charges (no sub-charges)
+  // DISCO Charges - Service Provider Beneficiary
   {
     id: "charge_1",
     name: "Transmission Service Charge",
@@ -2014,6 +2022,8 @@ export const mockChargeTypes: ChargeType[] = [
     hasSubCharges: false,
     code: "MET.TSP",
     entityType: "DISCO",
+    chargeCategory: "DISCO",
+    beneficiaryType: "SERVICE_PROVIDER",
     linkedServiceProviders: ["ent6"], // TCN-TSP
     status: "active",
     createdBy: "System",
@@ -2027,6 +2037,8 @@ export const mockChargeTypes: ChargeType[] = [
     hasSubCharges: false,
     code: "MET.ISO",
     entityType: "DISCO",
+    chargeCategory: "DISCO",
+    beneficiaryType: "SERVICE_PROVIDER",
     linkedServiceProviders: ["ent7"], // NISO-MO
     status: "active",
     createdBy: "System",
@@ -2039,13 +2051,63 @@ export const mockChargeTypes: ChargeType[] = [
     description: "Charges for ancillary services in the electricity market",
     hasSubCharges: false,
     code: "MET.ANC",
-    entityType: "ALL",
+    entityType: "DISCO",
+    chargeCategory: "DISCO",
+    beneficiaryType: "SERVICE_PROVIDER",
     linkedServiceProviders: ["ent6", "ent7"], // Both TCN and NISO
     status: "active",
     createdBy: "System",
     createdAt: "2024-01-01",
     updatedAt: "2024-01-01",
   },
+  // DISCO Charges - GENCO Beneficiary (Energy Payments)
+  {
+    id: "charge_9",
+    name: "Energy Payment",
+    description: "Energy payments from DISCOs to linked GENCOs",
+    hasSubCharges: false,
+    code: "ENR.PAY",
+    entityType: "DISCO",
+    chargeCategory: "DISCO",
+    beneficiaryType: "GENCO",
+    linkedGencos: ["ent4", "ent5"], // EGBIN and SAPELE
+    status: "active",
+    createdBy: "System",
+    createdAt: "2024-01-01",
+    updatedAt: "2024-01-01",
+  },
+  // BILATERAL Charges - Service Provider Beneficiary Only
+  {
+    id: "charge_10",
+    name: "Bilateral Admin Fee",
+    description: "Administrative fee for bilateral energy contracts",
+    hasSubCharges: false,
+    code: "BIL.ADM",
+    entityType: "BILATERAL",
+    chargeCategory: "BILATERAL",
+    beneficiaryType: "SERVICE_PROVIDER",
+    linkedServiceProviders: ["ent7"], // NISO-MO
+    status: "active",
+    createdBy: "System",
+    createdAt: "2024-01-01",
+    updatedAt: "2024-01-01",
+  },
+  {
+    id: "charge_11",
+    name: "Bilateral Transmission Use",
+    description: "Transmission usage fee for bilateral contracts",
+    hasSubCharges: false,
+    code: "BIL.TSP",
+    entityType: "BILATERAL",
+    chargeCategory: "BILATERAL",
+    beneficiaryType: "SERVICE_PROVIDER",
+    linkedServiceProviders: ["ent6"], // TCN-TSP
+    status: "active",
+    createdBy: "System",
+    createdAt: "2024-01-01",
+    updatedAt: "2024-01-01",
+  },
+  // GENCO Charges (unchanged)
   {
     id: "charge_4",
     name: "Generation Capacity Charge",

@@ -691,6 +691,34 @@ export const CHARGE_ENTITY_TYPES = {
   },
 } as const;
 
+// Charge beneficiary types (who receives the payment)
+export const CHARGE_BENEFICIARY_TYPES = {
+  SERVICE_PROVIDER: {
+    value: "SERVICE_PROVIDER",
+    label: "Service Provider",
+    description: "Payment goes to a Service Provider (TCN, MO, etc.)",
+  },
+  GENCO: {
+    value: "GENCO",
+    label: "Generation Company (GENCO)",
+    description: "Payment goes to a linked Generation Company",
+  },
+} as const;
+
+// Charge categories (which entity type pays)
+export const CHARGE_CATEGORIES = {
+  DISCO: {
+    value: "DISCO",
+    label: "DISCO Charges",
+    description: "Charges paid by Distribution Companies",
+  },
+  BILATERAL: {
+    value: "BILATERAL",
+    label: "Bilateral Charges",
+    description: "Charges paid by Bilateral Partners",
+  },
+} as const;
+
 // ===========================================
 // Nigerian States
 // ===========================================

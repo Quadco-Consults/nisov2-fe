@@ -3,6 +3,12 @@ import { z } from "zod";
 // Entity types that can be assigned to charges
 const entityTypes = ["DISCO", "GENCO", "SERVICE_PROVIDER", "SERC", "BILATERAL", "ALL"] as const;
 
+// Charge beneficiary types
+const beneficiaryTypes = ["SERVICE_PROVIDER", "GENCO"] as const;
+
+// Charge categories
+const chargeCategories = ["DISCO", "BILATERAL"] as const;
+
 // Sub-charge schema
 export const subChargeSchema = z.object({
   id: z.string().optional(),
@@ -45,6 +51,14 @@ export const createSimpleChargeSchema = z.object({
   entityType: z.enum(entityTypes, {
     required_error: "Please select an entity type",
   }),
+  // Charge category: DISCO or BILATERAL (which entity type pays)
+  chargeCategory: z.enum(chargeCategories).optional(),
+  // Beneficiary type: SERVICE_PROVIDER or GENCO (only for DISCO charges)
+  beneficiaryType: z.enum(beneficiaryTypes).optional(),
+  // Linked GENCOs (for DISCO charges with GENCO beneficiary)
+  linkedGencos: z.array(z.string()).optional(),
+  // Linked service providers
+  linkedServiceProviders: z.array(z.string()).optional(),
 });
 
 // Create Charge Schema (for charges with sub-charges)
@@ -75,11 +89,16 @@ export type CreateChargeInput = z.infer<typeof createChargeSchema>;
 export const editSimpleChargeSchema = createSimpleChargeSchema.extend({
   id: z.string(),
   status: z.enum(["active", "inactive"]),
+  chargeCategory: z.enum(chargeCategories).optional(),
+  beneficiaryType: z.enum(beneficiaryTypes).optional(),
+  linkedGencos: z.array(z.string()).optional(),
+  linkedServiceProviders: z.array(z.string()).optional(),
 });
 
 export const editChargeWithSubChargesSchema = createChargeWithSubChargesSchema.extend({
   id: z.string(),
   status: z.enum(["active", "inactive"]),
+  chargeCategory: z.enum(chargeCategories).optional(),
 });
 
 export const editChargeSchema = z.discriminatedUnion("hasSubCharges", [

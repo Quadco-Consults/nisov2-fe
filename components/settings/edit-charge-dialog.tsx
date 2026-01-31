@@ -30,8 +30,17 @@ import {
   editChargeSchema,
   EditChargeInput,
 } from "@/lib/validations/charge-management";
-import { ENTITY_CATEGORIES } from "@/lib/constants";
-import { ChargeType, ChargeEntityType } from "@/types";
+import { ENTITY_CATEGORIES, CHARGE_BENEFICIARY_TYPES } from "@/lib/constants";
+import { ChargeType, ChargeEntityType, ChargeBeneficiaryType } from "@/types";
+import { mockRegisteredEntities } from "@/server/services/mock-data";
+
+// Get GENCOs and Service Providers from mock data
+const availableGencos = mockRegisteredEntities.filter(
+  (e) => e.category === "GENCO" && e.registrationStatus === "active"
+);
+const availableServiceProviders = mockRegisteredEntities.filter(
+  (e) => e.category === "SERVICE_PROVIDER" && e.registrationStatus === "active"
+);
 
 interface EditChargeDialogProps {
   open: boolean;
@@ -56,6 +65,8 @@ export function EditChargeDialog({
   onUpdateCharge,
 }: EditChargeDialogProps) {
   const [hasSubCharges, setHasSubCharges] = useState(false);
+  const [beneficiaryType, setBeneficiaryType] = useState<ChargeBeneficiaryType>("SERVICE_PROVIDER");
+  const [selectedBeneficiaries, setSelectedBeneficiaries] = useState<string[]>([]);
 
   const {
     register,
@@ -78,6 +89,16 @@ export function EditChargeDialog({
   useEffect(() => {
     if (charge && open) {
       setHasSubCharges(charge.hasSubCharges);
+      setBeneficiaryType(charge.beneficiaryType || "SERVICE_PROVIDER");
+
+      // Set selected beneficiaries based on beneficiary type
+      if (charge.beneficiaryType === "GENCO" && charge.linkedGencos) {
+        setSelectedBeneficiaries(charge.linkedGencos);
+      } else if (charge.linkedServiceProviders) {
+        setSelectedBeneficiaries(charge.linkedServiceProviders);
+      } else {
+        setSelectedBeneficiaries([]);
+      }
 
       if (charge.hasSubCharges) {
         reset({
@@ -135,6 +156,9 @@ export function EditChargeDialog({
     if (data.hasSubCharges) {
       updatedCharge.code = undefined;
       updatedCharge.entityType = undefined;
+      updatedCharge.beneficiaryType = undefined;
+      updatedCharge.linkedGencos = undefined;
+      updatedCharge.linkedServiceProviders = undefined;
       updatedCharge.subCharges = data.subCharges.map((sub, index) => ({
         id: sub.id || `subcharge-${Date.now()}-${index}`,
         code: sub.code,
@@ -146,6 +170,23 @@ export function EditChargeDialog({
       updatedCharge.subCharges = undefined;
       updatedCharge.code = data.code;
       updatedCharge.entityType = data.entityType as ChargeEntityType;
+
+      // Update beneficiary configuration for DISCO charges
+      if (charge.chargeCategory === "DISCO") {
+        updatedCharge.beneficiaryType = beneficiaryType;
+        if (beneficiaryType === "GENCO") {
+          updatedCharge.linkedGencos = selectedBeneficiaries;
+          updatedCharge.linkedServiceProviders = undefined;
+        } else {
+          updatedCharge.linkedServiceProviders = selectedBeneficiaries;
+          updatedCharge.linkedGencos = undefined;
+        }
+      } else if (charge.chargeCategory === "BILATERAL") {
+        // Bilateral charges always have Service Provider beneficiary
+        updatedCharge.beneficiaryType = "SERVICE_PROVIDER";
+        updatedCharge.linkedServiceProviders = selectedBeneficiaries;
+        updatedCharge.linkedGencos = undefined;
+      }
     }
 
     onUpdateCharge(updatedCharge);
@@ -156,7 +197,25 @@ export function EditChargeDialog({
   const handleClose = () => {
     reset();
     setHasSubCharges(false);
+    setBeneficiaryType("SERVICE_PROVIDER");
+    setSelectedBeneficiaries([]);
     onOpenChange(false);
+  };
+
+  // Get available beneficiaries based on type
+  const availableBeneficiaries = beneficiaryType === "GENCO" ? availableGencos : availableServiceProviders;
+
+  // Handle beneficiary type change
+  const handleBeneficiaryTypeChange = (type: ChargeBeneficiaryType) => {
+    setBeneficiaryType(type);
+    setSelectedBeneficiaries([]); // Reset selections when type changes
+  };
+
+  // Toggle beneficiary selection
+  const toggleBeneficiary = (id: string) => {
+    setSelectedBeneficiaries((prev) =>
+      prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
+    );
   };
 
   if (!charge) return null;
@@ -285,6 +344,120 @@ export function EditChargeDialog({
                   )}
                 </div>
               </div>
+
+              {/* Beneficiary Type - Only for DISCO charges */}
+              {charge?.chargeCategory === "DISCO" && (
+                <div className="space-y-4 pt-4 border-t">
+                  <h4 className="font-medium">Beneficiary Configuration</h4>
+                  <div className="grid gap-2">
+                    <Label>Beneficiary Type *</Label>
+                    <Select
+                      value={beneficiaryType}
+                      onValueChange={(value) => handleBeneficiaryTypeChange(value as ChargeBeneficiaryType)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select beneficiary type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.values(CHARGE_BENEFICIARY_TYPES).map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {beneficiaryType === "SERVICE_PROVIDER"
+                        ? "Payment will go to selected Service Providers"
+                        : "Payment will go to linked Generation Companies"}
+                    </p>
+                  </div>
+
+                  {/* Beneficiary Selection */}
+                  <div className="grid gap-2">
+                    <Label>
+                      Select {beneficiaryType === "GENCO" ? "GENCOs" : "Service Providers"} *
+                    </Label>
+                    <div className="border rounded-lg p-3 max-h-[200px] overflow-y-auto space-y-2">
+                      {availableBeneficiaries.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-2">
+                          No {beneficiaryType === "GENCO" ? "GENCOs" : "Service Providers"} available
+                        </p>
+                      ) : (
+                        availableBeneficiaries.map((entity) => (
+                          <div
+                            key={entity.id}
+                            className="flex items-center space-x-2"
+                          >
+                            <Checkbox
+                              id={`edit-beneficiary-${entity.id}`}
+                              checked={selectedBeneficiaries.includes(entity.id)}
+                              onCheckedChange={() => toggleBeneficiary(entity.id)}
+                            />
+                            <Label
+                              htmlFor={`edit-beneficiary-${entity.id}`}
+                              className="text-sm font-normal cursor-pointer flex-1"
+                            >
+                              <span className="font-medium">{entity.alias}</span>
+                              <span className="text-muted-foreground ml-2">- {entity.name}</span>
+                            </Label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    {selectedBeneficiaries.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {selectedBeneficiaries.length} selected
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Beneficiary Selection - For BILATERAL charges (always Service Provider) */}
+              {charge?.chargeCategory === "BILATERAL" && (
+                <div className="space-y-4 pt-4 border-t">
+                  <h4 className="font-medium">Beneficiary Configuration</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Bilateral charges always pay to Service Providers
+                  </p>
+                  <div className="grid gap-2">
+                    <Label>Select Service Providers *</Label>
+                    <div className="border rounded-lg p-3 max-h-[200px] overflow-y-auto space-y-2">
+                      {availableServiceProviders.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-2">
+                          No Service Providers available
+                        </p>
+                      ) : (
+                        availableServiceProviders.map((entity) => (
+                          <div
+                            key={entity.id}
+                            className="flex items-center space-x-2"
+                          >
+                            <Checkbox
+                              id={`edit-sp-${entity.id}`}
+                              checked={selectedBeneficiaries.includes(entity.id)}
+                              onCheckedChange={() => toggleBeneficiary(entity.id)}
+                            />
+                            <Label
+                              htmlFor={`edit-sp-${entity.id}`}
+                              className="text-sm font-normal cursor-pointer flex-1"
+                            >
+                              <span className="font-medium">{entity.alias}</span>
+                              <span className="text-muted-foreground ml-2">- {entity.name}</span>
+                            </Label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    {selectedBeneficiaries.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {selectedBeneficiaries.length} selected
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

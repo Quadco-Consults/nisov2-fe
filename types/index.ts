@@ -398,6 +398,11 @@ export interface RegisteredEntity {
   linkedServiceProviderName?: string;
   state?: string; // For SERC entities
 
+  // Linked GENCOs (for DISCOs and BILATERALs)
+  // When a DISCO/BILATERAL pays charges with GENCO beneficiary type,
+  // payments go to these linked GENCOs
+  linkedGencoIds?: string[];
+
   // Priority Flags (for Service Providers)
   isPrioritySP: boolean;
   waterfallTier?: number;
@@ -641,6 +646,12 @@ export interface ManagedUser {
 // Entity types that charges can be assigned to
 export type ChargeEntityType = "DISCO" | "GENCO" | "SERVICE_PROVIDER" | "SERC" | "BILATERAL" | "ALL";
 
+// Charge beneficiary type (who receives the payment)
+export type ChargeBeneficiaryType = "SERVICE_PROVIDER" | "GENCO";
+
+// Charge category (which entity type pays this charge)
+export type ChargeCategory = "DISCO" | "BILATERAL";
+
 // Sub-charge (for charges with multiple components)
 export interface SubCharge {
   id: string;
@@ -665,6 +676,18 @@ export interface ChargeType {
   linkedServiceProviders?: string[];
   // Only populated if hasSubCharges is true
   subCharges?: SubCharge[];
+
+  // Charge category: which entity type pays this charge (DISCO or BILATERAL)
+  chargeCategory?: ChargeCategory;
+
+  // Beneficiary type: who receives the payment (SERVICE_PROVIDER or GENCO)
+  // Only applicable for DISCO charges
+  beneficiaryType?: ChargeBeneficiaryType;
+
+  // Linked GENCOs: for DISCO charges with GENCO beneficiary type
+  // These are the GENCOs that receive payments for this charge
+  linkedGencos?: string[];
+
   status: "active" | "inactive";
   createdBy?: string;
   createdAt: string;

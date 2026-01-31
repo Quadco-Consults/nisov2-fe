@@ -87,9 +87,15 @@ export default function EntitiesPage() {
   const [spAllocations, setSpAllocations] = useState<ServiceProviderAllocation[]>([]);
   const [selectedState, setSelectedState] = useState<string>("");
 
-  // Get DISCOs and Service Providers from mock data
+  // DISCO/BILATERAL-specific state for linked GENCOs
+  const [selectedGencos, setSelectedGencos] = useState<string[]>([]);
+
+  // Get DISCOs, GENCOs, and Service Providers from mock data
   const availableDiscos = mockRegisteredEntities.filter(
     (e) => e.category === "DISCO" && e.registrationStatus === "active"
+  );
+  const availableGencos = mockRegisteredEntities.filter(
+    (e) => e.category === "GENCO" && e.registrationStatus === "active"
   );
   const availableServiceProviders = mockRegisteredEntities.filter(
     (e) => e.category === "SERVICE_PROVIDER" && e.registrationStatus === "active"
@@ -117,6 +123,28 @@ export default function EntitiesPage() {
     );
   };
 
+  // Handle adding a GENCO for DISCO/BILATERAL
+  const handleAddGenco = () => {
+    const availableGenco = availableGencos.find(
+      (genco) => !selectedGencos.includes(genco.id)
+    );
+    if (availableGenco) {
+      setSelectedGencos((prev) => [...prev, availableGenco.id]);
+    }
+  };
+
+  // Handle removing a GENCO
+  const handleRemoveGenco = (gencoId: string) => {
+    setSelectedGencos((prev) => prev.filter((id) => id !== gencoId));
+  };
+
+  // Handle changing a GENCO selection
+  const handleGencoChange = (oldGencoId: string, newGencoId: string) => {
+    setSelectedGencos((prev) =>
+      prev.map((id) => (id === oldGencoId ? newGencoId : id))
+    );
+  };
+
   // Handle adding a service provider allocation
   const handleAddSpAllocation = () => {
     const availableSp = availableServiceProviders.find(
@@ -137,13 +165,18 @@ export default function EntitiesPage() {
     );
   };
 
-  // Reset SERC fields when category changes
+  // Reset fields when category changes
   const handleCategoryChange = (category: string) => {
     setNewEntityCategory(category);
+    // Reset SERC-specific fields
     if (category !== "SERC") {
       setSelectedDiscos([]);
       setSpAllocations([]);
       setSelectedState("");
+    }
+    // Reset DISCO/BILATERAL-specific fields
+    if (category !== "DISCO" && category !== "BILATERAL") {
+      setSelectedGencos([]);
     }
   };
 
@@ -285,6 +318,101 @@ export default function EntitiesPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Linked GENCOs - Only show for DISCO and BILATERAL */}
+                {(newEntityCategory === "DISCO" || newEntityCategory === "BILATERAL") && (
+                  <div className="border-t pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h4 className="font-medium">Linked GENCOs</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {newEntityCategory === "DISCO"
+                            ? "Select the Generation Companies (GENCOs) that this DISCO pays for energy"
+                            : "Select the linked GENCO that acts as collector/intermediary for bilateral payments"}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAddGenco}
+                        disabled={selectedGencos.length >= availableGencos.length}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add
+                      </Button>
+                    </div>
+
+                    {selectedGencos.length === 0 ? (
+                      <p className="text-sm text-muted-foreground italic text-center py-4 border rounded-lg bg-muted/30">
+                        No GENCOs linked. Click &quot;Add&quot; to select GENCOs.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {selectedGencos.map((gencoId) => {
+                          const genco = availableGencos.find((g) => g.id === gencoId);
+                          return (
+                            <div
+                              key={gencoId}
+                              className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30"
+                            >
+                              <div className="flex-1">
+                                <Select
+                                  value={gencoId}
+                                  onValueChange={(value) => handleGencoChange(gencoId, value)}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select GENCO" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {availableGencos
+                                      .filter(
+                                        (g) =>
+                                          g.id === gencoId ||
+                                          !selectedGencos.includes(g.id)
+                                      )
+                                      .map((g) => (
+                                        <SelectItem key={g.id} value={g.id}>
+                                          {g.alias} - {g.name}
+                                        </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveGenco(gencoId)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {newEntityCategory === "DISCO" && selectedGencos.length > 0 && (
+                      <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                        <p className="text-xs text-blue-700 dark:text-blue-300">
+                          <strong>Note:</strong> When registering settlements, charges with GENCO beneficiary type
+                          will generate payment lines to these linked GENCOs.
+                        </p>
+                      </div>
+                    )}
+
+                    {newEntityCategory === "BILATERAL" && selectedGencos.length > 0 && (
+                      <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-950 rounded-lg">
+                        <p className="text-xs text-amber-700 dark:text-amber-300">
+                          <strong>Note:</strong> For bilateral contracts, the linked GENCO acts as the
+                          collector/intermediary but payments go to Service Providers.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Service Provider Settings - Only show for Service Providers */}
                 {newEntityCategory === "SERVICE_PROVIDER" && (

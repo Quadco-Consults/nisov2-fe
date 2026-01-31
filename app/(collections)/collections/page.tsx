@@ -94,10 +94,9 @@ const generateMonthOptions = () => {
 
 const monthOptions = generateMonthOptions();
 
-// Entity types for settlement
+// Entity types for settlement (GENCO removed - they receive payments, not make them)
 const SETTLEMENT_ENTITY_TYPES = [
   { value: "DISCO", label: "Distribution Company (DISCO)" },
-  { value: "GENCO", label: "Generation Company (GENCO)" },
   { value: "BILATERAL", label: "Bilateral Partner" },
 ] as const;
 
@@ -131,6 +130,13 @@ export default function CollectionsPage() {
     );
   }, []);
 
+  // Get GENCOs
+  const gencos = useMemo(() => {
+    return mockRegisteredEntities.filter(
+      (e) => e.category === "GENCO" && e.registrationStatus === "active"
+    );
+  }, []);
+
   // Generate payment lines when entity is selected
   useEffect(() => {
     if (!selectedEntityId || !selectedEntityType) {
@@ -149,34 +155,82 @@ export default function CollectionsPage() {
       if (charge.status !== "active") return false;
       if (charge.hasSubCharges) return false; // Skip composite charges for now
 
-      // Check if charge applies to this entity type or ALL
+      // For DISCO: include charges with chargeCategory DISCO
+      // For BILATERAL: include charges with chargeCategory BILATERAL
+      if (selectedEntityType === "DISCO") {
+        return charge.chargeCategory === "DISCO";
+      } else if (selectedEntityType === "BILATERAL") {
+        return charge.chargeCategory === "BILATERAL";
+      }
+
+      // Fallback to entity type matching for older charges without category
       return charge.entityType === selectedEntityType || charge.entityType === "ALL";
     });
 
-    // Generate payment lines for each charge type + service provider combination
+    // Generate payment lines for each charge type + beneficiary combination
     const lines: SettlementPaymentLine[] = [];
 
     applicableCharges.forEach((charge) => {
-      if (!charge.code || !charge.linkedServiceProviders) return;
+      if (!charge.code) return;
 
-      charge.linkedServiceProviders.forEach((spId) => {
-        const sp = serviceProviders.find((s) => s.id === spId);
-        if (!sp) return;
+      // For DISCO charges, check beneficiary type
+      if (selectedEntityType === "DISCO") {
+        if (charge.beneficiaryType === "GENCO" && charge.linkedGencos) {
+          // GENCO beneficiary - payment goes to linked GENCOs
+          charge.linkedGencos.forEach((gencoId) => {
+            const genco = gencos.find((g) => g.id === gencoId);
+            if (!genco) return;
 
-        lines.push({
-          chargeCode: charge.code,
-          chargeName: charge.name,
-          serviceProviderId: sp.id,
-          serviceProviderAlias: sp.alias,
-          serviceProviderName: sp.name,
-          paymentIdentifier: `${charge.code}-${sp.alias}`,
-          amount: 0,
-        });
-      });
+            lines.push({
+              chargeCode: charge.code!,
+              chargeName: charge.name,
+              serviceProviderId: genco.id,
+              serviceProviderAlias: genco.alias,
+              serviceProviderName: genco.name,
+              paymentIdentifier: `${charge.code}-${genco.alias}`,
+              amount: 0,
+            });
+          });
+        } else if (charge.linkedServiceProviders) {
+          // Service Provider beneficiary
+          charge.linkedServiceProviders.forEach((spId) => {
+            const sp = serviceProviders.find((s) => s.id === spId);
+            if (!sp) return;
+
+            lines.push({
+              chargeCode: charge.code!,
+              chargeName: charge.name,
+              serviceProviderId: sp.id,
+              serviceProviderAlias: sp.alias,
+              serviceProviderName: sp.name,
+              paymentIdentifier: `${charge.code}-${sp.alias}`,
+              amount: 0,
+            });
+          });
+        }
+      } else if (selectedEntityType === "BILATERAL") {
+        // Bilateral charges always have Service Provider beneficiary
+        if (charge.linkedServiceProviders) {
+          charge.linkedServiceProviders.forEach((spId) => {
+            const sp = serviceProviders.find((s) => s.id === spId);
+            if (!sp) return;
+
+            lines.push({
+              chargeCode: charge.code!,
+              chargeName: charge.name,
+              serviceProviderId: sp.id,
+              serviceProviderAlias: sp.alias,
+              serviceProviderName: sp.name,
+              paymentIdentifier: `${charge.code}-${sp.alias}`,
+              amount: 0,
+            });
+          });
+        }
+      }
     });
 
     setPaymentLines(lines);
-  }, [selectedEntityId, selectedEntityType, serviceProviders]);
+  }, [selectedEntityId, selectedEntityType, serviceProviders, gencos]);
 
   // Handle amount change for a payment line
   const handleAmountChange = (index: number, amount: number) => {
