@@ -1,0 +1,281 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Enums
+enum EntityCategory {
+  DISCO
+  GENCO
+  SERVICE_PROVIDER
+  SERC
+  BILATERAL
+}
+
+enum RegistrationStatus {
+  draft
+  pending_validation
+  validated
+  active
+  suspended
+  deactivated
+}
+
+enum ChargeStatus {
+  active
+  inactive
+}
+
+enum ChargeBeneficiaryType {
+  SERVICE_PROVIDER
+  GENCO
+}
+
+enum ChargeCategory {
+  DISCO
+  BILATERAL
+}
+
+enum CollectionStatus {
+  pending
+  verified
+  posted
+}
+
+enum UserRole {
+  super_admin
+  admin
+  finance_manager
+  treasury_officer
+  settlement_officer
+  auditor
+  viewer
+}
+
+enum UserStatus {
+  active
+  inactive
+  pending
+  locked
+}
+
+// Bank Details (embedded in Entity)
+model BankDetails {
+  id            String  @id @default(cuid())
+  bankName      String
+  accountNumber String
+  accountName   String
+  bankCode      String?
+
+  entity   RegisteredEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  entityId String           @unique
+}
+
+// Registered Entity - Market participants
+model RegisteredEntity {
+  id          String         @id @default(cuid())
+  alias       String         @unique
+  name        String
+  category    EntityCategory
+  description String?
+
+  // Contact Information
+  contactPerson String?
+  email         String?
+  phone         String?
+  address       String?
+
+  // Bank Details
+  bankDetails BankDetails?
+
+  // Remita Integration
+  remitaValidated       Boolean   @default(false)
+  remitaValidationDate  DateTime?
+
+  // Regulatory Linkage (for SERCs)
+  linkedServiceProviderId   String?
+  linkedServiceProviderName String?
+  state                     String?
+
+  // Linked GENCOs (for DISCOs and BILATERALs)
+  linkedGencoIds String[]
+
+  // Priority Flags (for Service Providers)
+  isPrioritySP  Boolean @default(false)
+  waterfallTier Int?
+
+  // Registration Workflow
+  registrationStatus RegistrationStatus @default(draft)
+  registeredBy       String?
+  registeredAt       DateTime?
+  validatedBy        String?
+  validatedAt        DateTime?
+
+  // Financial Tracking
+  totalCollections   Float @default(0)
+  totalDisbursements Float @default(0)
+  currentBalance     Float @default(0)
+  outstandingDebt    Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  collections         Collection[]
+  chargesAsProvider   ChargeType[]        @relation("ChargeServiceProviders")
+  chargesAsGenco      ChargeType[]        @relation("ChargeGencos")
+  sercAllocations     SercAllocation[]
+
+  @@index([category])
+  @@index([registrationStatus])
+}
+
+// SERC Service Provider Allocations
+model SercAllocation {
+  id                String  @id @default(cuid())
+  serviceProviderId String
+  percentage        Float
+
+  serc   RegisteredEntity @relation(fields: [sercId], references: [id], onDelete: Cascade)
+  sercId String
+
+  @@unique([sercId, serviceProviderId])
+}
+
+// Charge Type
+model ChargeType {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  code        String? @unique
+
+  hasSubCharges Boolean @default(false)
+
+  // Category and Beneficiary
+  chargeCategory  ChargeCategory?
+  beneficiaryType ChargeBeneficiaryType?
+
+  // Linked entities
+  linkedServiceProviders RegisteredEntity[] @relation("ChargeServiceProviders")
+  linkedGencos           RegisteredEntity[] @relation("ChargeGencos")
+
+  // Sub-charges for composite charges
+  subCharges SubCharge[]
+
+  status    ChargeStatus @default(active)
+  createdBy String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // Relations
+  collections Collection[]
+
+  @@index([chargeCategory])
+  @@index([status])
+}
+
+// Sub-charge for composite charges
+model SubCharge {
+  id          String  @id @default(cuid())
+  code        String
+  name        String
+  description String?
+  entityType  String  // DISCO, GENCO, etc.
+
+  chargeType   ChargeType @relation(fields: [chargeTypeId], references: [id], onDelete: Cascade)
+  chargeTypeId String
+
+  @@index([chargeTypeId])
+}
+
+// Collection / Settlement Entry
+model Collection {
+  id        String @id @default(cuid())
+  paymentId String @unique
+
+  // Entity making the payment
+  entity      RegisteredEntity @relation(fields: [entityId], references: [id])
+  entityId    String
+  entityAlias String
+  entityName  String
+  entityType  String
+
+  // Charge information
+  chargeType   ChargeType @relation(fields: [chargeTypeId], references: [id])
+  chargeTypeId String
+  chargeCode   String
+
+  // Service provider receiving the payment
+  serviceProviderId    String
+  serviceProviderAlias String
+
+  // Settlement details
+  period String // e.g., "2025-01"
+  amount Float
+
+  status      CollectionStatus @default(pending)
+  auditLocked Boolean          @default(false)
+  auditHash   String?
+
+  postedBy   String?
+  postedAt   DateTime?
+  verifiedBy String?
+  verifiedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([entityId])
+  @@index([chargeTypeId])
+  @@index([period])
+  @@index([status])
+}
+
+// User
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  firstName String
+  lastName  String
+  role      UserRole
+  status    UserStatus @default(pending)
+
+  department    String?
+  phone         String?
+  lastLogin     DateTime?
+  loginAttempts Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+  @@index([status])
+}
+
+// Audit Log
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  userEmail String
+  action    String
+  resource  String
+  resourceId String?
+  details   Json?
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+}
