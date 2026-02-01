@@ -269,7 +269,6 @@ export function ChargesTab({ charges, onChargesChange, chargeCategory }: Charges
                 <TableHead className="w-[40px]"></TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Code / Sub-charges</TableHead>
-                <TableHead>Entity Type</TableHead>
                 {chargeCategory === "DISCO" && <TableHead>Beneficiary</TableHead>}
                 <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
@@ -279,7 +278,7 @@ export function ChargesTab({ charges, onChargesChange, chargeCategory }: Charges
             <TableBody>
               {filteredCharges.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={chargeCategory === "DISCO" ? 8 : 7} className="text-center py-8">
+                  <TableCell colSpan={chargeCategory === "DISCO" ? 7 : 6} className="text-center py-8">
                     <div className="text-muted-foreground">
                       <Tag className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p>No charge types found</p>
@@ -330,17 +329,6 @@ export function ChargesTab({ charges, onChargesChange, chargeCategory }: Charges
                           <code className="bg-muted px-2 py-1 rounded text-sm">
                             {charge.code}
                           </code>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {charge.hasSubCharges ? (
-                          <span className="text-sm text-muted-foreground">
-                            Multiple
-                          </span>
-                        ) : (
-                          <Badge variant="outline">
-                            {getEntityTypeDisplayName(charge.entityType || "ALL")}
-                          </Badge>
                         )}
                       </TableCell>
                       {chargeCategory === "DISCO" && (
@@ -433,11 +421,7 @@ export function ChargesTab({ charges, onChargesChange, chargeCategory }: Charges
                               {subCharge.code}
                             </code>
                           </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {getEntityTypeDisplayName(subCharge.entityType)}
-                            </Badge>
-                          </TableCell>
+                          {chargeCategory === "DISCO" && <TableCell>-</TableCell>}
                           <TableCell>
                             <span className="text-sm text-muted-foreground">
                               Sub-charge

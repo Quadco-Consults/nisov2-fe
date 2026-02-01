@@ -132,7 +132,8 @@ export function CreateChargeDialog({
       }));
     } else {
       newCharge.code = data.code;
-      newCharge.entityType = data.entityType as ChargeEntityType;
+      // Auto-set entity type based on charge category
+      newCharge.entityType = chargeCategory as ChargeEntityType;
 
       // Add beneficiary configuration for DISCO charges
       if (chargeCategory === "DISCO") {
@@ -244,42 +245,16 @@ export function CreateChargeDialog({
           {!hasSubCharges && (
             <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
               <h4 className="font-medium">Charge Identifier</h4>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="code">Unique Code *</Label>
-                  <Input
-                    id="code"
-                    placeholder="e.g., MET.TSP"
-                    {...register("code")}
-                  />
-                  {errors.code && (
-                    <p className="text-sm text-destructive">{errors.code.message}</p>
-                  )}
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="entityType">Entity Type *</Label>
-                  <Select
-                    value={watch("entityType") || "ALL"}
-                    onValueChange={(value) => setValue("entityType", value as ChargeEntityType)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select entity type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {entityTypeOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.entityType && (
-                    <p className="text-sm text-destructive">
-                      {errors.entityType.message}
-                    </p>
-                  )}
-                </div>
+              <div className="grid gap-2">
+                <Label htmlFor="code">Unique Code *</Label>
+                <Input
+                  id="code"
+                  placeholder="e.g., MET.TSP"
+                  {...register("code")}
+                />
+                {errors.code && (
+                  <p className="text-sm text-destructive">{errors.code.message}</p>
+                )}
               </div>
 
               {/* Beneficiary Type - Only for DISCO charges */}
