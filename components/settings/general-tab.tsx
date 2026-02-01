@@ -1,7 +1,6 @@
 "use client";
 
-import { Settings, Bell, Shield, Database, Globe, Palette } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Bell, Shield, Globe } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -19,54 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { VARIANCE_THRESHOLD } from "@/lib/constants";
 
 export function GeneralTab() {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      {/* Treasury Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            Treasury Configuration
-          </CardTitle>
-          <CardDescription>
-            Core treasury and market parameters
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-2">
-            <Label>Variance Threshold (%)</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                defaultValue={VARIANCE_THRESHOLD}
-                className="max-w-[100px]"
-              />
-              <span className="text-sm text-muted-foreground">
-                Flag deviations exceeding +/-{VARIANCE_THRESHOLD}%
-              </span>
-            </div>
-          </div>
-          <Separator />
-          <div className="grid gap-2">
-            <Label>Default Settlement Period</Label>
-            <Select defaultValue="monthly">
-              <SelectTrigger className="max-w-[200px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="daily">Daily</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button className="mt-4">Save Configuration</Button>
-        </CardContent>
-      </Card>
-
       {/* Notification Settings */}
       <Card>
         <CardHeader>
