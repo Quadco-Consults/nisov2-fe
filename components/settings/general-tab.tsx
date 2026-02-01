@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SERC_SPLIT, VARIANCE_THRESHOLD } from "@/lib/constants";
+import { VARIANCE_THRESHOLD } from "@/lib/constants";
 
 export function GeneralTab() {
   return (
@@ -36,21 +36,6 @@ export function GeneralTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-2">
-            <Label>SERC Split Rate (%)</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                value={SERC_SPLIT.STATE_SERC * 100}
-                disabled
-                className="max-w-[100px]"
-              />
-              <span className="text-sm text-muted-foreground">
-                Statutory 5% deduction to State SERC
-              </span>
-            </div>
-          </div>
-          <Separator />
           <div className="grid gap-2">
             <Label>Variance Threshold (%)</Label>
             <div className="flex items-center gap-2">
